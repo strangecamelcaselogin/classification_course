@@ -2,7 +2,7 @@ from pathlib import Path
 import math
 import matplotlib.pyplot as plt
 
-from potential_functions_method.models import ClassicModel
+from potential_functions_method.models import ClassicModel, AbstractModel, StochasticModel
 
 
 def sq_dist(x, y):
@@ -14,7 +14,7 @@ def dist(x, y):
     return math.sqrt(sum((xi - yi)**2 for xi, yi in zip(x, y)))
 
 
-def viz2d(model: ClassicModel, train_data, border=(-25, 25, 25, -25), step:int = 1):
+def viz2d(model: AbstractModel, train_data, border=(-25, 25, 25, -25), step:int = 1):
     """ Визуализация классов в пространстве признаков """
     x1, y1, x2, y2 = border
 
@@ -75,27 +75,14 @@ def f(x, xk, a=1):
     return a * math.e ** (-a * sq_dist(x, xk))
 
 
-if __name__ == '__main__':
-    data = Path('./data')
-    # d, images, labels = load_data('simple2d.txt', data)
-    d, images, labels = load_data('advanced2d.txt', data)
-    # d, images, labels = load_data('simple1d.txt', data)
-    # d, images, labels = load_data('simple3d.txt', data)
-
-    classic = ClassicModel(f, dimensions=d)
-
-    # произведем обучение классификатора
-    classic.learn(images, labels)
-
-    # мы не можем показать другие измерения
-    if d == 2:
-        viz2d(classic, (images, labels))
-
-    # m.save()  # todo дать имя модели
-
+def interact(model):
     try:
         while True:
             i = input('Образ (через пробел): ')
+
+            if i.lower() in ['e', 'exit']:
+                return
+
             try:
                 i = parse_line(i)
             except (ValueError, TypeError) as e:
@@ -103,10 +90,50 @@ if __name__ == '__main__':
                 continue
 
             try:
-                c = classic.predict(i)
+                c = model.predict(i)
                 print(f'Класс: #{c + 1}\n')
             except AssertionError as e:
                 print(f'При вычислении возникла ошибка.\n  "{e}"')
 
     except KeyboardInterrupt:
         print('Выход')
+
+
+def run_classic(d, images, labels):
+    model = ClassicModel(f, dimensions=d)
+
+    # произведем обучение классификатора
+    model.learn(images, labels)
+
+    if d == 2:
+        viz2d(model, (images, labels))
+
+    # m.save()  # todo дать имя модели
+
+    interact(model)
+
+
+def run_stochastic(d, images, labels):
+    model = StochasticModel(f, dimensions=d)
+
+    model.learn(images, labels)
+
+    if d == 2:
+        viz2d(model, (images, labels))
+
+    # m.save()  # todo дать имя модели
+
+    interact(model)
+
+
+if __name__ == '__main__':
+    data = Path('./data')
+
+    # 'simple1d.txt'
+    # 'simple2d.txt', 'advanced2d.txt'
+    data_names = ['simple1d.txt']
+
+    for d_name in data_names:
+        d, images, labels = load_data(d_name, data)
+        # run_classic(d, images, labels)
+        run_stochastic(d, images, labels)
