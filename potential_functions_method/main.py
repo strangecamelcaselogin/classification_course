@@ -2,7 +2,7 @@ from pathlib import Path
 import math
 import matplotlib.pyplot as plt
 
-from potential_functions_method.models import ClassicModel, AbstractModel, StochasticModel
+from potential_functions_method.models import ClassicModel, AbstractModel, StochasticModel, ReStochasticModel
 
 
 def sq_dist(x, y):
@@ -100,7 +100,8 @@ def interact(model):
 
 
 def run_classic(d, images, labels):
-    model = ClassicModel(f, dimensions=d)
+    classes = list(sorted(list(set(labels))))
+    model = ClassicModel(f, classes, dimensions=d)
 
     # произведем обучение классификатора
     model.learn(images, labels)
@@ -114,7 +115,22 @@ def run_classic(d, images, labels):
 
 
 def run_stochastic(d, images, labels):
-    model = StochasticModel(f, dimensions=d)
+    classes = list(sorted(list(set(labels))))
+    model = StochasticModel(f, classes, dimensions=d)
+
+    model.learn(images, labels)
+
+    if d == 2:
+        viz2d(model, (images, labels))
+
+    # m.save()  # todo дать имя модели
+
+    interact(model)
+
+
+def run_restochastic(d, images, labels):
+    classes = list(sorted(list(set(labels))))
+    model = ReStochasticModel(f, classes, dimensions=d)
 
     model.learn(images, labels)
 
@@ -131,9 +147,13 @@ if __name__ == '__main__':
 
     # 'simple1d.txt'
     # 'simple2d.txt', 'advanced2d.txt'
-    data_names = ['simple1d.txt']
+    data_names = ['simple2d.txt']
 
     for d_name in data_names:
         d, images, labels = load_data(d_name, data)
-        # run_classic(d, images, labels)
-        run_stochastic(d, images, labels)
+        print('>>>>> classic')
+        run_classic(d, images, labels)
+        # print('>>>>> stochastic')
+        # run_stochastic(d, images, labels)
+        print('>>>>> restochastic')
+        run_restochastic(d, images, labels)

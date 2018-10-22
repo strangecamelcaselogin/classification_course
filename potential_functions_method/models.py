@@ -17,11 +17,12 @@ class AbstractModel:
 
 
 class ClassicModel(AbstractModel):
-    def __init__(self, f: Callable, dimensions: int=2):
+    def __init__(self, f: Callable, classes, dimensions: int=2):
         """
         :param dimensions: размерность модели
         """
         self.f = f  # потенциальная функция
+        self.classes = classes
         self._potential = []  # "история" для вычисления степени над e
 
         self.dimensions = dimensions
@@ -87,12 +88,13 @@ class ClassicModel(AbstractModel):
 
 
 class StochasticModel(AbstractModel):
-    def __init__(self, f: Callable, dimensions: int=2):
+    def __init__(self, f: Callable, classes, dimensions: int=2):
         """
         :param dimensions: размерность модели
         """
         self.f = f  # потенциальная функция
-        self._potentials = {i: [] for i in range(dimensions)}  # "история" для вычисления степени над e
+        self.classes = classes
+        self._potentials = {i: [] for i in classes}  # "история" для вычисления степени над e
 
         self.dimensions = dimensions
 
@@ -110,7 +112,7 @@ class StochasticModel(AbstractModel):
     def learn(self, images, labels, limit=100):
         assert len(images) == len(labels), 'Length of images and labels must be equal!'
 
-        potentials_j = {i: 1 for i in range(self.dimensions)}
+        potentials_j = {i: 1 for i in self.classes}
         success = total = 0
         while total < limit:
             print('Global Iteration.')
@@ -118,7 +120,7 @@ class StochasticModel(AbstractModel):
             for xk_new, target_cls in zip(images, labels):
                 total += 1
                 print(f'Local iteration: {total}, target_cls: {target_cls}')
-                for cls in range(self.dimensions):
+                for cls in self.classes:
                     res = self.K(xk_new, for_cls=cls)
 
                     # если образ принадлежит классу
@@ -144,7 +146,7 @@ class StochasticModel(AbstractModel):
                 print()
 
                 if success >= len(images):
-                    print(f'Break by success count. Total iterations: {total}, todo pow of e')
+                    print(f'Break by success count. Total iterations: {total}')
                     for cls, ph in self._potentials.items():
                         print(cls, ph)
                     print()
@@ -154,7 +156,7 @@ class StochasticModel(AbstractModel):
     def predict(self, image):
         m = 0
         m_cls_idx = 0
-        for cls in range(self.dimensions):
+        for cls in self.classes:
             k = self.K(image, for_cls=cls)
             if k > m:
                 m = k
@@ -168,3 +170,55 @@ class StochasticModel(AbstractModel):
     @classmethod
     def load(cls, model_name):
         pass
+
+
+class ReStochasticModel(StochasticModel):
+    """ StochasticModel с переделанным обучением, работает идентично """
+    def learn(self, images, labels, limit=100):
+        assert len(images) == len(labels), 'Length of images and labels must be equal!'
+
+        potentials_j = {i: 1 for i in self.classes}
+        success = total = 0
+        while total < limit:
+            print('Global Iteration.')
+
+            total_success = True
+            for cls in self.classes:
+                total += 1
+
+                for xk_new, target_cls in zip(images, labels):
+
+                    res = self.K(xk_new, for_cls=cls)
+
+                    # если образ принадлежит классу
+                    if cls == target_cls:
+                        if res <= 0:
+                            success = 0
+                            total_success = False
+                            j = 1 / potentials_j[cls]
+                            potentials_j[cls] += 1
+                            self._potentials[cls].append((j, xk_new))
+                        else:
+                            success += 1
+                    # если образ НЕ принадлежит классу
+                    else:
+                        if res >= 0:
+                            success = 0
+                            total_success = False
+                            j = - 1 / potentials_j[cls]
+                            potentials_j[cls] += 1
+                            self._potentials[cls].append((j, xk_new))
+                        else:
+                            success += 1
+
+                    print(f'{"*" if success == 0 else ""} #{cls}, K: {res}')
+                print()
+
+
+            if total_success:
+                print(f'Break by success count. Total iterations: {total}')
+                for cls, ph in self._potentials.items():
+                    print(cls, ph)
+                print()
+
+                return total
