@@ -147,6 +147,7 @@ if __name__ == '__main__':
 
     # 'simple1d.txt'
     # 'simple2d.txt', 'advanced2d.txt'
+    # 'wavelets.txt'
     data_names = ['simple2d.txt']
 
     for d_name in data_names:
